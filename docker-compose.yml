@@ -1,20 +1,61 @@
-version: "3.9"
-
 services:
-  device-service:
-    build: ./services/device-service
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    ports:
+      - "5432:5432"
+    volumes:
+      - symbio_pg:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7
+    ports:
+      - "6379:6379"
+
+  iam-service:
+    build: ./services/iam-service
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      JWT_SECRET: ${JWT_SECRET}
     ports:
       - "8001:8001"
+    depends_on:
+      - postgres
+
+  device-service:
+    build: ./services/device-service
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      JWT_SECRET: ${JWT_SECRET}
+    ports:
+      - "8002:8002"
+    depends_on:
+      - postgres
+      - redis
 
   job-service:
     build: ./services/job-service
-    ports:
-      - "8002:8002"
-
-  scheduler-service:
-    build: ./services/scheduler-service
-    depends_on:
-      - device-service
-      - job-service
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      JWT_SECRET: ${JWT_SECRET}
+      REDIS_URL: redis://redis:6379/0
     ports:
       - "8003:8003"
+    depends_on:
+      - postgres
+      - redis
+
+  telemetry-service:
+    build: ./services/telemetry-service
+    environment:
+      REDIS_URL: redis://redis:6379/0
+    ports:
+      - "8004:8004"
+    depends_on:
+      - redis
+
+volumes:
+  symbio_pg:
