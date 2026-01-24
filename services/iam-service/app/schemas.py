@@ -2,7 +2,7 @@ from pydantic import BaseModel, EmailStr, Field
 from typing import Optional
 from datetime import datetime
 from enum import Enum
-
+from uuid import UUID
 class UserRole(str, Enum):
     GUEST = "GUEST"
     HOST = "HOST"
@@ -35,7 +35,7 @@ class UpdateProfileRequest(BaseModel):
 
 # Response Models
 class UserResponse(BaseModel):
-    id: str
+    id: UUID
     email: str
     full_name: Optional[str]
     role: UserRole
