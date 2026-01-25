@@ -10,7 +10,7 @@ services:
     volumes:
       - symbio_pg:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $POSTGRES_USER -d $POSTGRES_DB"]
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
       interval: 2s
       timeout: 3s
       retries: 30
@@ -38,7 +38,8 @@ services:
     ports:
       - "8001:8001"
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
 
   device-service:
     build: ./services/device-service
@@ -71,6 +72,51 @@ services:
       - "8004:8004"
     depends_on:
       - redis
+  minio:
+    image: minio/minio:latest
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    command: server /data --console-address ":9001"
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+
+
+  dataset-service:
+    build:
+      context: ./services/dataset-service
+      dockerfile: Dockerfile
+    image: symbiotica-backend-dataset-service
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      JWT_SECRET: ${JWT_SECRET}
+      S3_BUCKET: symbiotica-datasets
+      S3_ENDPOINT: http://minio:9000
+      S3_ACCESS_KEY: minioadmin
+      S3_SECRET_KEY: minioadmin
+      S3_REGION: us-east-1
+      ENCRYPTION_MASTER_KEY: ${ENCRYPTION_MASTER_KEY}
+    ports:
+      - "8000:8000"
+    depends_on:
+      - postgres
+      - minio
+
+  anonymization-service:
+    build:
+      context: ./services/anonymization-service
+      dockerfile: Dockerfile
+    image: symbiotica-backend-anonymization-service
+    environment:
+      DATASET_SERVICE_URL: http://dataset-service:8000
+    ports:
+      - "8006:8006"
+    depends_on:
+      - dataset-service
 
 volumes:
   symbio_pg:
+  minio_data:

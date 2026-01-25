@@ -1,0 +1,11 @@
+fastapi
+uvicorn
+sqlalchemy
+psycopg2-binary
+pydantic
+python-jose
+boto3
+cryptography
+python-multipart
+aiofiles
+pandas

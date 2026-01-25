@@ -1,0 +1,8 @@
+fastapi
+uvicorn
+pandas
+numpy
+pydantic
+boto3
+httpx
+faker
